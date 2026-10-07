@@ -511,4 +511,10 @@ function showLeaderboard() {
   openModal(content, closeButton);
 }
 
-createApp() 
+
+function init() {
+  createApp();
+  startNewGame();
+}
+
+init();
