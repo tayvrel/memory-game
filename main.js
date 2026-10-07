@@ -1,5 +1,9 @@
 const PAIRS_COUNT = 8;
 const MISMATCH_DELAY = 1000;
+const STORAGE_KEY = 'game-results';
+
+let activeModal = null;
+let modalEscapeHandler = null;
 
 const cardData = [
   { id: 1, image: './assets/cheese.svg', alt: 'Сыр' },
@@ -270,6 +274,241 @@ function finishGame() {
   window.setTimeout(() => {
     showVictory();
   }, 250);
+}
+
+function getResults() {
+  try {
+    const raw = window.localStorage.getItem(STORAGE_KEY);
+
+    if (!raw) {
+      return [];
+    }
+
+    const parsed = JSON.parse(raw);
+
+    if (!Array.isArray(parsed)) {
+      return [];
+    }
+
+    return parsed.filter(
+      (result) =>
+        Number.isInteger(result.moves) &&
+        result.moves > 0 &&
+        typeof result.date === 'string' &&
+        Number.isFinite(result.timestamp)
+    );
+  } catch (error) {
+    return [];
+  }
+}
+
+function saveResult(moves) {
+  const results = getResults();
+
+  results.push({
+    moves,
+    date: formatDate(new Date()),
+    timestamp: Date.now()
+  });
+
+  results.sort((a, b) => {
+    if (a.moves !== b.moves) {
+      return a.moves - b.moves;
+    }
+
+    return a.timestamp - b.timestamp;
+  });
+
+  const topResults = results.slice(0, 10);
+
+  try {
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(topResults));
+  } catch (error) {
+  }
+}
+
+function formatDate(date) {
+  const day = String(date.getDate()).padStart(2, '0');
+  const month = String(date.getMonth() + 1).padStart(2, '0');
+  const year = date.getFullYear();
+
+  return `${day}.${month}.${year}`;
+}
+
+function createModal() {
+  const modal = createElement('div', 'modal');
+
+  const content = createElement('div', 'modal__content');
+  content.addEventListener('click', (event) => {
+    event.stopPropagation();
+  });
+  modal.append(content);
+  modal.addEventListener('click', (event) => {
+    if (event.target === modal) {
+      closeModal();
+    }
+  });
+  return { modal, content };
+}
+
+function openModal(content, focusElement) {
+  closeModal();
+  const { modal, content: modalContent } = createModal();
+  modalContent.append(content);
+  document.body.append(modal);
+  activeModal = modal;
+  document.body.classList.add('modal-open');
+  modal.classList.add('modal--open');
+  modalEscapeHandler = (event) => {
+    if (event.key === 'Escape') {
+      closeModal();
+    }
+  };
+  document.addEventListener('keydown', modalEscapeHandler);
+  if (focusElement) {
+    window.setTimeout(() => focusElement.focus(), 0);
+  }
+}
+
+function closeModal() {
+  if (!activeModal) {
+    return;
+  }
+
+  activeModal.remove();
+  activeModal = null;
+
+  document.body.classList.remove('modal-open');
+
+  if (modalEscapeHandler) {
+    document.removeEventListener('keydown', modalEscapeHandler);
+    modalEscapeHandler = null;
+  }
+}
+
+function createModalHeader(titleText, descriptionText) {
+  const header = createElement('div', 'modal__header');
+
+  const text = createElement('div');
+  const title = createElement('h2', 'modal__title', titleText);
+  text.append(title);
+
+  if (descriptionText) {
+    const description = createElement('p', 'modal__text', descriptionText);
+    text.append(description);
+  }
+
+  const closeButton = createButton('×', 'modal__close');
+
+  header.append(text, closeButton);
+
+  return { header, closeButton };
+}
+
+function showVictory() {
+  const content = createElement('div');
+
+  const { header, closeButton } = createModalHeader(
+    'Победа!',
+    'Все картинки обрели свою пару :)'
+  );
+
+  const result = createElement('div', 'result');
+
+  const movesRow = createElement('div', 'result__row');
+  movesRow.append(
+    createElement('span', '', 'Количество ходов'),
+    createElement('strong', 'result__value', String(state.moves))
+  );
+
+  const pairsRow = createElement('div', 'result__row');
+  pairsRow.append(
+    createElement('span', '', 'Найдено пар'),
+    createElement('strong', 'result__value', `${state.pairs} / ${PAIRS_COUNT}`)
+  );
+
+  result.append(movesRow, pairsRow);
+
+  const actions = createElement('div', 'modal__actions');
+  const newGameButton = createButton('Новая игра', 'button button--primary');
+  const closeGameButton = createButton('Закрыть', 'button');
+
+  actions.append(newGameButton, closeGameButton);
+
+  content.append(header, result, actions);
+
+  closeButton.addEventListener('click', closeModal);
+  closeGameButton.addEventListener('click', closeModal);
+  newGameButton.addEventListener('click', startNewGame);
+
+  openModal(content, newGameButton);
+}
+
+function showLeaderboard() {
+  const content = createElement('div');
+
+  const { header, closeButton } = createModalHeader(
+    'Таблица лидеров',
+    'Топ 10 игр'
+  );
+
+  const results = getResults();
+
+  if (results.length === 0) {
+    const empty = createElement(
+      'p',
+      'leaderboard__empty',
+      'Пока нет результатов. Найдите все пары, чтобы попасть в таблицу.'
+    );
+
+    const actions = createElement('div', 'modal__actions');
+    const closeButtonBottom = createButton('Закрыть', 'button button--primary');
+
+    actions.append(closeButtonBottom);
+    content.append(header, empty, actions);
+
+    closeButton.addEventListener('click', closeModal);
+    closeButtonBottom.addEventListener('click', closeModal);
+
+    openModal(content, closeButton);
+    return;
+  }
+
+  const table = createElement('table', 'leaderboard');
+
+  const thead = document.createElement('thead');
+  const headerRow = document.createElement('tr');
+
+  ['Место', 'Ходы', 'Дата'].forEach((text) => {
+    headerRow.append(createElement('th', '', text));
+  });
+
+  thead.append(headerRow);
+
+  const tbody = document.createElement('tbody');
+
+  results.forEach((result, index) => {
+    const row = document.createElement('tr');
+    row.append(
+      createElement('td', '', String(index + 1)),
+      createElement('td', '', String(result.moves)),
+      createElement('td', '', result.date)
+    );
+    tbody.append(row);
+  });
+
+  table.append(thead, tbody);
+
+  const actions = createElement('div', 'modal__actions');
+  const closeButtonBottom = createButton('Закрыть', 'button button--primary');
+  actions.append(closeButtonBottom);
+
+  content.append(header, table, actions);
+
+  closeButton.addEventListener('click', closeModal);
+  closeButtonBottom.addEventListener('click', closeModal);
+
+  openModal(content, closeButton);
 }
 
 createApp() 
