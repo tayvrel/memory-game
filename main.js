@@ -1,3 +1,5 @@
+const PAIRS_COUNT = 8;
+
 const cardData = [
   { id: 1, image: './assets/cheese.svg', alt: 'Сыр' },
   { id: 2, image: './assets/cookie.svg', alt: 'Печенька' },
@@ -37,7 +39,6 @@ function createButton(text, className = 'button') {
   return button;
 }
 
-
 function createApp() {
   const app = createElement('main', 'app');
   const header = createElement('header', 'header');
@@ -67,7 +68,7 @@ function createApp() {
 
   const pairsStat = createElement('div', 'stat');
   const pairsLabel = createElement('span', 'stat__label', 'Найдено пар');
-  elements.pairs = createElement('strong', 'stat__value', `0 / 8`);
+  elements.pairs = createElement('strong', 'stat__value', `0 / ${PAIRS_COUNT}`);
   pairsStat.append(pairsLabel, elements.pairs);
 
   stats.append(movesStat, pairsStat);
@@ -81,6 +82,53 @@ function createApp() {
   elements.leaderboardButton.addEventListener('click', showLeaderboard);
 
   return app;
+}
+
+
+function shuffleCards(cards) {
+  const shuffled = [...cards];
+
+  for (let index = shuffled.length - 1; index > 0; index -= 1) {
+    const randomIndex = Math.floor(Math.random() * (index + 1));
+    [shuffled[index], shuffled[randomIndex]] = [shuffled[randomIndex], shuffled[index]];
+  }
+
+  return shuffled;
+}
+
+function createGameCards() {
+  const duplicated = [...cardData, ...cardData].map((card, index) => ({
+    ...card,
+    uniqueId: index
+  }));
+
+  return shuffleCards(duplicated);
+}
+
+
+function createCard(card) {
+  const button = createElement('button', 'card');
+  button.type = 'button';
+  const inner = createElement('span', 'card__inner');
+  const back = createElement('span', 'card__face card__face--back');
+  const front = createElement('span', 'card__face card__face--front');
+  const image = document.createElement('img');
+  image.className = 'card__image';
+  image.src = card.image;
+  image.alt = card.alt;
+  image.draggable = false;
+  front.append(image);
+  inner.append(back, front);
+  button.append(inner);
+  button.addEventListener('click', () => handleCardClick(button, card));
+  return button;
+}
+
+function renderCards(cards) {
+  elements.board.replaceChildren();
+  cards.forEach((card) => {
+    elements.board.append(createCard(card));
+  });
 }
 
 createApp() 
