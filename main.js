@@ -1,4 +1,5 @@
 const PAIRS_COUNT = 8;
+const MISMATCH_DELAY = 1000;
 
 const cardData = [
   { id: 1, image: './assets/cheese.svg', alt: 'Сыр' },
@@ -10,6 +11,18 @@ const cardData = [
   { id: 7, image: './assets/rainbow.svg', alt: 'Радуга' },
   { id: 8, image: './assets/unicorn.svg', alt: 'Еднорог' }
 ];
+
+const state = {
+  firstCard: null,
+  secondCard: null,
+  moves: 0,
+  pairs: 0,
+  lockBoard: false,
+  gameFinished: false,
+  closeTimer: null,
+  resultSaved: false
+};
+
 
 const elements = {
   app: null,
@@ -129,6 +142,97 @@ function renderCards(cards) {
   cards.forEach((card) => {
     elements.board.append(createCard(card));
   });
+}
+
+function openCard(cardElement) {
+  cardElement.classList.add('card--open');
+}
+
+function closeCard(cardElement) {
+  cardElement.classList.remove('card--open');
+}
+
+function resetSelection() {
+  state.firstCard = null;
+  state.secondCard = null;
+}
+
+
+function handleCardClick(cardElement, cardDataItem) {
+  if (state.lockBoard || state.gameFinished) {
+    return;
+  }
+
+  if (
+    cardElement.classList.contains('card--open') ||
+    cardElement.classList.contains('card--matched')
+  ) {
+    return;
+  }
+
+  openCard(cardElement);
+
+  if (!state.firstCard) {
+    state.firstCard = {
+      element: cardElement,
+      data: cardDataItem
+    };
+    return;
+  }
+
+  state.secondCard = {
+    element: cardElement,
+    data: cardDataItem
+  };
+
+  state.moves += 1;
+  updateStats();
+  checkPair();
+}
+
+function checkPair() {
+  const isMatch = state.firstCard.data.id === state.secondCard.data.id;
+
+  if (isMatch) {
+    handleMatch();
+  } else {
+    handleMismatch();
+  }
+}
+
+function handleMatch() {
+  state.firstCard.element.classList.add('card--matched');
+  state.secondCard.element.classList.add('card--matched');
+
+  state.firstCard.element.disabled = true;
+  state.secondCard.element.disabled = true;
+
+  state.pairs += 1;
+  updateStats();
+
+  resetSelection();
+
+  if (state.pairs === PAIRS_COUNT) {
+    finishGame();
+  }
+}
+
+function handleMismatch() {
+  state.lockBoard = true;
+
+  state.closeTimer = window.setTimeout(() => {
+    if (!state.firstCard || !state.secondCard) {
+      state.lockBoard = false;
+      return;
+    }
+
+    closeCard(state.firstCard.element);
+    closeCard(state.secondCard.element);
+
+    resetSelection();
+    state.lockBoard = false;
+    state.closeTimer = null;
+  }, MISMATCH_DELAY);
 }
 
 createApp() 
