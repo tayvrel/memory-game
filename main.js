@@ -60,11 +60,16 @@ function createApp() {
   const app = createElement('main', 'app');
   const header = createElement('header', 'header');
   const brand = createElement('div', 'header__brand');
-  const logo = createElement('div', 'header__logo', 'M');
+  const logo = createElement('div', 'header__logo');
+  
+  const logoImage = document.createElement('img');
+  logoImage.src = './assets/logo.svg';
+  logoImage.alt = 'Logo';
   const brandText = createElement('div');
   const title = createElement('h1', 'header__title', 'Memory Game');
   const subtitle = createElement('p', 'header__subtitle', 'Найди все пары');
 
+  logo.append(logoImage);
   brandText.append(title, subtitle);
   brand.append(logo, brandText);
 
