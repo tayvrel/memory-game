@@ -235,4 +235,41 @@ function handleMismatch() {
   }, MISMATCH_DELAY);
 }
 
+
+function updateStats() {
+  elements.moves.textContent = String(state.moves);
+  elements.pairs.textContent = `${state.pairs} / ${PAIRS_COUNT}`;
+}
+
+function startNewGame() {
+  window.clearTimeout(state.closeTimer);
+  state.closeTimer = null;
+
+  if (activeModal) {
+    closeModal();
+  }
+
+  state.firstCard = null;
+  state.secondCard = null;
+  state.moves = 0;
+  state.pairs = 0;
+  state.lockBoard = false;
+  state.gameFinished = false;
+  state.resultSaved = false;
+
+  updateStats();
+  renderCards(createGameCards());
+}
+
+function finishGame() {
+  state.gameFinished = true;
+  state.resultSaved = true;
+
+  saveResult(state.moves);
+
+  window.setTimeout(() => {
+    showVictory();
+  }, 250);
+}
+
 createApp() 
